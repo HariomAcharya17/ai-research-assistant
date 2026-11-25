@@ -7,7 +7,8 @@ import { ACCEPT, readDocument } from "@/lib/client/files";
 import { canFetchFullText, loadFullText } from "@/lib/client/research";
 import { useStore, type Project } from "@/lib/client/store";
 import { checkSimilarity, type SentenceResult, type SimilarityReport, type SourceDoc } from "@/lib/similarity";
-import { Badge, Button, Callout, Card, cn } from "./ui";
+import { AiCheck } from "./AiCheck";
+import { Badge, Button, Callout, Card, cn, Segmented } from "./ui";
 
 function buildDocs(project: Project): SourceDoc[] {
   const docs: SourceDoc[] = [];
@@ -27,6 +28,7 @@ export function DraftTab({ project, onOpen }: { project: Project; onOpen: (id: s
   const [report, setReport] = useState<SimilarityReport | null>(null);
   const [selected, setSelected] = useState<SentenceResult | null>(null);
   const [loadingFT, setLoadingFT] = useState<{ done: number; total: number; failed: number } | null>(null);
+  const [mode, setMode] = useState<"overlap" | "ai">("overlap");
   const fileRef = useRef<HTMLInputElement>(null);
   const draft = project.draft;
 
@@ -79,10 +81,10 @@ export function DraftTab({ project, onOpen }: { project: Project; onOpen: (id: s
   if (!draft)
     return (
       <Card className="p-5">
-        <h3 className="font-serif text-[20px]">Check your draft for overlapping wording</h3>
+        <h3 className="font-serif text-[20px]">Check your draft</h3>
         <p className="mt-1 max-w-2xl text-[13.5px] leading-relaxed text-muted">
-          Compares your text with the abstracts and full texts this project has loaded. It shows where your wording matches
-          a source so you can quote or cite it. Your draft stays in this browser.
+          Two checks: where your wording overlaps the papers in this project, so you can quote or cite them, and an
+          estimate of how much of the text reads as AI-generated. Your draft stays in this browser.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
           <textarea
@@ -117,27 +119,53 @@ export function DraftTab({ project, onOpen }: { project: Project; onOpen: (id: s
 
   const flaggedPct = report ? pct(report.strongWords + report.partialWords, report.totalWords) : 0;
 
+  const header = (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <Segmented
+        value={mode}
+        onChange={setMode}
+        options={[
+          { value: "overlap", label: "Source overlap" },
+          { value: "ai", label: "AI writing" },
+        ]}
+      />
+      <div className="flex min-w-0 items-center gap-2 text-[12.5px] text-muted">
+        <span className="truncate">
+          {draft.name} · {draft.text.split(/\s+/).length.toLocaleString()} words
+        </span>
+        <Button
+          size="sm"
+          variant="ghost"
+          icon={<Trash2 className="size-3.5" />}
+          onClick={() => {
+            update(project.id, { draft: undefined });
+            setReport(null);
+          }}
+        >
+          Remove
+        </Button>
+      </div>
+    </div>
+  );
+
+  if (mode === "ai")
+    return (
+      <div className="space-y-4">
+        {header}
+        <AiCheck text={draft.text} />
+      </div>
+    );
+
   return (
     <div className="space-y-4">
+      {header}
       <Card className="p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <div className="text-[12px] text-muted">Draft</div>
-            <div className="truncate font-medium">{draft.name}</div>
-            <div className="text-[12.5px] text-faint">{draft.text.split(/\s+/).length.toLocaleString()} words</div>
+            <h3 className="font-medium">Source overlap</h3>
+            <p className="text-[12.5px] text-muted">Finds wording in your draft that matches the papers in this project.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              icon={<Trash2 className="size-3.5" />}
-              onClick={() => {
-                update(project.id, { draft: undefined });
-                setReport(null);
-              }}
-            >
-              Remove
-            </Button>
             {oaMissing.length > 0 && (
               <Button
                 size="sm"

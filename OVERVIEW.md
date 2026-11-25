@@ -4,7 +4,7 @@ A short guide to what the app does and how a request flows through it. For setup
 
 ## In one sentence
 
-You describe a research idea (or upload a draft), and the app searches 10+ free scholarly sources worldwide, ranks the papers, explains them with links back to the text, finds research gaps, builds verified citations and checks your draft for overlapping wording.
+You describe a research idea (or upload a draft), and the app searches 10+ free scholarly sources worldwide, ranks the papers, explains them with links back to the text, finds research gaps, builds verified citations and checks your draft for overlapping wording and AI-generated text.
 
 ## The user flow
 
@@ -22,7 +22,7 @@ You describe a research idea (or upload a draft), and the app searches 10+ free 
    Papers ─► open a paper ─► full text ─► AI explanation linked to passages
    Gaps   ─► pick 2+ papers ─► author-stated limitations + AI suggestions
    References ─► APA / IEEE / MLA / Chicago / Harvard / Vancouver / BibTeX
-   Draft  ─► similarity check of your draft against loaded sources
+   Draft  ─► source overlap check + AI writing check (runs on your device)
    Writing ─► grammar, clarity, structure, cited paraphrase (with diff)
 ```
 
@@ -110,7 +110,31 @@ Paste or upload your draft. Each sentence is compared with the abstracts and ful
 
 Each match shows the source passage next to your sentence. This is a check against the sources the app can access. It is not a plagiarism guarantee.
 
-### 9. Writing help (`/api/write`)
+### 9. AI writing check (runs in the browser)
+
+In the Draft tab, switch to **AI writing**. Two open detection models run on your device, and your text is never uploaded:
+
+- **TMR**: RoBERTa trained on the RAID benchmark, which covers 11 AI models and adversarial rewrites. It is good at catching edited AI text.
+- **Fakespot**: Mozilla's RoBERTa detector. It gives fewer false alarms on formal writing.
+
+How it works:
+
+1. The draft is split into paragraph-sized chunks (about 200 words at most). Quotations and the reference list are removed, and chunks under 40 words are not scored.
+2. Both models score each chunk.
+3. **Likely AI** means both models scored 95% or more. **Possibly AI** means one model scored 90% or more. **Likely human** means both scored below 90%.
+4. The result shows the share of words at each level, highlights each chunk and lists both models' scores.
+
+The models (about 250 MB) download once and are then cached by the browser. A first run took about 40 seconds in testing, and later runs took about 8 seconds.
+
+No AI detector is 100% accurate:
+
+- In our test, 2 of 25 human-written abstracts from before ChatGPT existed were marked likely AI, and 8 more were marked possibly AI.
+- AI text that has been rewritten casually can pass as human.
+- Results are reliable only for English.
+
+The page says all this and shows the result as an estimate, never as proof.
+
+### 10. Writing help (`/api/write`)
 
 Grammar, clarity, structure and paraphrasing, with a word-level diff of the changes. Paraphrasing needs a source and keeps the citation. The prompts forbid inventing facts or references, and the tool does not disguise copied text.
 
@@ -125,6 +149,7 @@ Grammar, clarity, structure and paraphrasing, with a word-level diff of the chan
 | Research gaps | no | yes |
 | Citations | yes | yes |
 | Draft similarity check | yes | yes |
+| AI writing check | yes (in browser) | yes |
 | Writing help | no | yes |
 | Start from a draft | basic (title and abstract) | AI summary of the draft |
 
@@ -156,3 +181,4 @@ src/components/         Home screen, project view and the five tabs
 - Semantic Scholar is often busy without a free key. The other sources cover the gap.
 - Groq's free tier has per-minute limits. When they are hit, the app falls back to another model or to keyword ranking.
 - The similarity check sees only the sources loaded in the project.
+- The AI writing check is an estimate. Formal human writing is sometimes flagged, and heavily rewritten AI text can pass.

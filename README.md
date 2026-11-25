@@ -24,6 +24,7 @@ Everything it uses is free: open scholarly APIs, Groq's free AI tier and Vercel'
 - **Identify research gaps.** Limitations the authors state are shown with an exact quote, which the server checks word for word against the paper text; quotes that don't match are removed. AI-suggested follow-up questions are shown separately and labelled as AI suggestions.
 - **Citations.** References in APA, IEEE, MLA, Chicago, Harvard and Vancouver, plus BibTeX export. They are formatted from the DOI registration record (Crossref/DataCite) and marked as verified. Papers without a DOI are formatted from search metadata and marked as unverified.
 - **Draft similarity check.** Compares each sentence of your draft with the abstracts and full texts the project has loaded, using word 5-gram overlap. It shows strong, partial and quoted matches next to the matching source passage. It is a similarity check against sources the app can access, not a guarantee that work is free of plagiarism.
+- **AI writing check.** Estimates how much of a draft reads as AI-generated. Two open detection models (TMR, trained on the RAID benchmark, and Mozilla Fakespot's RoBERTa detector) run in the browser with Transformers.js, so the text never leaves the device. The draft is split into paragraph-sized chunks. Quotations and the reference list are left out, and chunks under 40 words are not scored. A chunk is marked likely AI only when both models score it at 95% or more, and possibly AI when one model reaches 90%. Each chunk shows both scores. The models (about 250 MB) download once and are cached. No detector is fully accurate: in our test, 2 of 25 human-written pre-ChatGPT abstracts were marked likely AI. The app says so and presents the result as an estimate, not proof.
 - **Responsible writing help.** Grammar, clarity, structure, and cited paraphrasing with a word-level diff. The prompts forbid inventing facts or citations, and the tool is not designed to disguise copied text or evade plagiarism detection.
 - **Indexing labels.** Papers are labelled by publisher and source. DOAJ listing comes from OpenAlex. With a free Elsevier key, journal ISSNs are checked against Scopus. Otherwise Scopus status is left unchecked instead of being guessed.
 
@@ -34,6 +35,7 @@ Everything it uses is free: open scholarly APIs, Groq's free AI tier and Vercel'
 - Zustand with IndexedDB persistence (idb-keyval), so all user data stays in the browser
 - Zod for request validation and structured AI output
 - Groq (`openai/gpt-oss-120b` and `gpt-oss-20b`, with fallbacks) for AI features
+- Transformers.js (ONNX Runtime Web) for the in-browser AI writing detectors
 - unpdf for PDF text (on the server for open-access PDFs, in the browser for uploads), mammoth for DOCX, and diff for revision views
 - Vitest for unit tests
 
@@ -87,3 +89,4 @@ src/
 - Semantic Scholar's keyless pool is shared and often busy. A free key fixes this, and the other sources cover the gap meanwhile.
 - Groq's free tier has per-minute token limits. When they are hit, the app falls back to another model or to keyword ranking and tells you.
 - The similarity check only sees the sources loaded in the project. It does not search the web or student-paper databases.
+- The AI writing check is an estimate. Formal human writing is sometimes flagged, heavily rewritten AI text can pass, and it is reliable only for English.
