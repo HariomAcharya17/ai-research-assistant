@@ -16,15 +16,17 @@ export function RelevanceMeter({ paper, compact }: { paper: Paper; compact?: boo
       title={
         r.method === "ai"
           ? `AI rubric score ${r.score}/100. 90+: same problem and method · 70+: same problem or same method on a close problem · 40+: shared sub-problem, technique or data · below 40: background.`
-          : `Keyword score ${r.score}/100: BM25 overlap with your idea, scaled so the best match is 100.`
+          : `Keyword match ${r.score}/100: how many important words this paper shares with your idea. The best match is 100.`
       }
     >
       <div className="h-1.5 w-16 overflow-hidden rounded-full bg-surface-2">
         <div className={cn("h-full rounded-full", color)} style={{ width: `${Math.max(4, r.score)}%` }} />
       </div>
-      <span className="text-[12px] tabular-nums text-muted">
-        <span className="font-semibold text-text">{r.score}</span> · {label}
-        {r.method === "keyword" && " (keywords)"}
+      <span className="whitespace-nowrap text-[12px] tabular-nums text-muted">
+        <span className={cn("font-semibold", r.level === "high" ? "text-good" : r.level === "medium" ? "text-warn" : "text-text")}>
+          {label} match
+        </span>{" "}
+        · {r.score}
       </span>
     </div>
   );
@@ -61,8 +63,8 @@ export function SourceBadges({ paper }: { paper: Paper }) {
           Preprint
         </Badge>
       )}
-      <span className="text-[11.5px] text-faint" title="Which search services returned this paper">
-        via {paper.foundVia.map((s) => SOURCE_NAMES[s]).join(" + ")}
+      <span className="text-[11.5px] text-faint" title="Which databases returned this paper">
+        found in {paper.foundVia.map((s) => SOURCE_NAMES[s]).join(" + ")}
       </span>
     </div>
   );

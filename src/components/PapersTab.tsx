@@ -1,6 +1,6 @@
 "use client";
 
-import { BookmarkCheck, BookmarkPlus, Info, Search, Sparkles } from "lucide-react";
+import { BookmarkCheck, BookmarkPlus, BookOpen, Info, Search, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { authorLine } from "@/lib/cite";
 import { toggleRef } from "@/lib/client/research";
@@ -16,11 +16,13 @@ function PaperCard({
   rank,
   project,
   onOpen,
+  ai,
 }: {
   paper: Paper;
   rank: number;
   project: Project;
   onOpen: (id: string) => void;
+  ai: boolean;
 }) {
   const inRefs = project.refs.includes(paper.id);
   const summarized = Boolean(project.summaries[paper.id]);
@@ -84,8 +86,14 @@ function PaperCard({
               <Button size="sm" variant="ghost" onClick={() => toggleRef(project.id, paper.id)} icon={inRefs ? <BookmarkCheck className="size-4 text-accent" /> : <BookmarkPlus className="size-4" />}>
                 {inRefs ? "In references" : "Cite"}
               </Button>
-              <Button size="sm" variant={summarized ? "secondary" : "primary"} onClick={() => onOpen(paper.id)} icon={<Sparkles className="size-3.5" />}>
-                {summarized ? "View summary" : "Explain"}
+              <Button
+                size="sm"
+                variant={summarized ? "secondary" : "primary"}
+                onClick={() => onOpen(paper.id)}
+                icon={ai || summarized ? <Sparkles className="size-3.5" /> : <BookOpen className="size-3.5" />}
+                title={ai ? "Read an AI summary linked to the paper's text" : "Open the paper's details"}
+              >
+                {summarized ? "View summary" : ai ? "Explain" : "Details"}
               </Button>
             </div>
           </div>
@@ -95,7 +103,17 @@ function PaperCard({
   );
 }
 
-export function PapersTab({ project, running, onOpen }: { project: Project; running: boolean; onOpen: (id: string) => void }) {
+export function PapersTab({
+  project,
+  running,
+  onOpen,
+  ai,
+}: {
+  project: Project;
+  running: boolean;
+  onOpen: (id: string) => void;
+  ai: boolean;
+}) {
   const [sort, setSort] = useState<Sort>("relevance");
   const [label, setLabel] = useState<string>("all");
   const [oaOnly, setOaOnly] = useState(false);
@@ -133,7 +151,7 @@ export function PapersTab({ project, running, onOpen }: { project: Project; runn
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Filter by title, author or venue"
+              placeholder="Search within these results"
               className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-[13.5px] outline-none placeholder:text-faint focus:border-accent"
             />
           </div>
@@ -162,7 +180,7 @@ export function PapersTab({ project, running, onOpen }: { project: Project; runn
                 label === l ? "border-accent bg-accent-soft text-accent-text" : "border-border bg-surface text-muted hover:text-text",
               )}
             >
-              {l === "all" ? "All sources" : l.length > 32 ? l.slice(0, 30) + "…" : l} <span className="tabular-nums opacity-70">{n}</span>
+              {l === "all" ? "All publishers" : l.length > 32 ? l.slice(0, 30) + "…" : l} <span className="tabular-nums opacity-70">{n}</span>
             </button>
           ))}
         </div>
@@ -172,17 +190,20 @@ export function PapersTab({ project, running, onOpen }: { project: Project; runn
         <Info className="mt-0.5 size-3.5 shrink-0" />
         {aiRanked ? (
           <span>
-            Ordered by a relevance score: an AI rates each paper&apos;s title and abstract against your idea on a fixed
-            0–100 rubric (hover a score for the scale). It is a ranking aid, not a measured similarity percentage.
+            An AI read each title and abstract and scored how closely it matches your idea, from 0 to 100. Hover a score to
+            see the scale. It is a guide for ranking, not a measured similarity.
           </span>
         ) : (
-          <span>Ordered by keyword overlap (BM25) between your idea and each title and abstract.</span>
+          <span>
+            The match score shows how many important words a paper&apos;s title and abstract share with your idea. The best
+            match scores 100.
+          </span>
         )}
       </div>
 
       <div className="space-y-3">
         {shown.map((p) => (
-          <PaperCard key={p.id} paper={p} rank={rankOf.get(p.id) ?? 0} project={project} onOpen={onOpen} />
+          <PaperCard key={p.id} paper={p} rank={rankOf.get(p.id) ?? 0} project={project} onOpen={onOpen} ai={ai} />
         ))}
         {running && project.steps.rank.state === "active" && (
           <div className="flex items-center gap-2 px-1 text-[13px] text-muted">

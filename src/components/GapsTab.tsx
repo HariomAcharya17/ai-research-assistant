@@ -5,9 +5,19 @@ import { useMemo, useState } from "react";
 import { authorLine } from "@/lib/cite";
 import { findGaps } from "@/lib/client/research";
 import type { Project } from "@/lib/client/store";
-import { Badge, Button, Callout, Card, cn, Empty } from "./ui";
+import { AiOff, Badge, Button, Callout, Card, cn } from "./ui";
 
-export function GapsTab({ project, ai, onOpen }: { project: Project; ai: boolean; onOpen: (id: string) => void }) {
+export function GapsTab({
+  project,
+  ai,
+  onOpen,
+  onTab,
+}: {
+  project: Project;
+  ai: boolean;
+  onOpen: (id: string) => void;
+  onTab?: (t: "papers" | "refs" | "draft") => void;
+}) {
   const usable = useMemo(
     () => project.papers.filter((p) => p.abstract || project.fulltext[p.id]),
     [project.papers, project.fulltext],
@@ -39,9 +49,12 @@ export function GapsTab({ project, ai, onOpen }: { project: Project; ai: boolean
 
   if (!ai)
     return (
-      <Empty icon={<Lightbulb className="size-5" />} title="Gap analysis needs AI">
-        Add a free GROQ_API_KEY to the deployment to compare papers and find gaps.
-      </Empty>
+      <AiOff
+        icon={<Lightbulb className="size-5" />}
+        title="Find research gaps"
+        what="Pick several papers and see the limitations their authors admit, quoted from the text, plus open questions worth studying."
+        onTab={onTab}
+      />
     );
 
   const fullCount = picked.filter((id) => project.fulltext[id]).length;

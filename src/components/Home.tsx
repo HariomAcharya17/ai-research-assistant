@@ -1,14 +1,17 @@
 "use client";
 
 import {
-  AlertTriangle,
   ArrowRight,
   BookMarked,
   FileSearch,
   FileUp,
+  Info,
   Lightbulb,
   Lock,
+  PenLine,
   Quote,
+  ScanText,
+  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
 } from "lucide-react";
@@ -32,37 +35,49 @@ const EXAMPLES = [
 function SourceList({ status }: { status: SourceStatus | null }) {
   if (!status)
     return (
-      <div className="grid gap-2 sm:grid-cols-2">
-        {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className="skeleton h-14" />
+      <div className="flex flex-wrap gap-2">
+        {Array.from({ length: 8 }, (_, i) => (
+          <div key={i} className="skeleton h-8 w-24 rounded-full" />
         ))}
       </div>
     );
-  const extras = [
-    { name: "Crossref / DataCite citations", coverage: "Reference details taken from the DOI registration record", on: true, key: undefined as string | undefined },
-    { name: "Scopus indexing check", coverage: "Checks each journal's ISSN against Scopus", on: status.scopus, key: "ELSEVIER_API_KEY" },
-    { name: "Unpaywall", coverage: "Finds legal open-access copies by DOI", on: status.unpaywall, key: "CONTACT_EMAIL" },
-    { name: "Google Scholar", coverage: "One-click link per paper (Scholar has no public API)", on: true, key: undefined },
+  // Only show what this site can use; setup details live in the README, not in front of researchers.
+  const rows = [
+    ...status.sources.filter((s) => s.on).map((s) => ({ name: s.name, coverage: s.coverage })),
+    ...(status.unpaywall ? [{ name: "Unpaywall", coverage: "Finds legal open-access copies of paywalled papers" }] : []),
+    ...(status.scopus ? [{ name: "Scopus check", coverage: "Checks whether each journal is indexed in Scopus" }] : []),
+    { name: "Google Scholar", coverage: "One-click link for every paper" },
   ];
-  const rows = [...status.sources.map((s) => ({ name: s.name, coverage: s.coverage, on: s.on, key: s.keyRequired ? s.key : undefined })), ...extras];
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
+    <div className="flex flex-wrap gap-2">
       {rows.map((s) => (
-        <div
+        <span
           key={s.name}
-          className={cn("rounded-lg border px-3 py-2.5", s.on ? "border-border bg-surface" : "border-dashed border-border bg-transparent")}
+          title={s.coverage}
+          className="inline-flex cursor-default items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] text-text transition hover:border-border-strong"
         >
-          <div className="flex items-center gap-2 text-[13px] font-medium">
-            <span className={cn("size-1.5 shrink-0 rounded-full", s.on ? "bg-good" : "bg-border-strong")} />
-            <span className={cn(!s.on && "text-muted")}>{s.name}</span>
-            {!s.on && s.key && <span className="ml-auto text-[11px] font-normal text-faint">needs free {s.key}</span>}
-          </div>
-          <p className="mt-0.5 pl-3.5 text-[12px] leading-snug text-muted">{s.coverage}</p>
-        </div>
+          <span className="size-1.5 rounded-full bg-good" />
+          {s.name}
+        </span>
       ))}
     </div>
   );
 }
+
+const STEPS = [
+  { icon: <PenLine />, t: "Describe your idea", d: "A few sentences about your problem and approach, or upload a draft paper." },
+  { icon: <FileSearch />, t: "Get related papers", d: "10+ scholarly databases are searched at once, and the best matches come first." },
+  { icon: <BookMarked />, t: "Read, cite and check", d: "Understand papers, find gaps, build references and check your draft." },
+];
+
+const FEATURES = [
+  { icon: <FileSearch />, t: "Related papers", d: "Every field and country, merged and ranked, with the reason for each match." },
+  { icon: <BookMarked />, t: "Papers explained", d: "Question, methods, findings and limits, each linked to the exact passage." },
+  { icon: <Lightbulb />, t: "Research gaps", d: "Limits the authors admit, quoted and checked, kept apart from AI ideas." },
+  { icon: <Quote />, t: "Verified references", d: "APA, IEEE, MLA, Chicago, Harvard, Vancouver and BibTeX from DOI records." },
+  { icon: <ScanText />, t: "Draft checks", d: "See wording that overlaps sources, and estimate how much reads as AI-written." },
+  { icon: <ShieldCheck />, t: "Private and free", d: "No sign-up. Your projects and drafts stay in your own browser." },
+];
 
 export function Home({ status }: { status: SourceStatus | null }) {
   const create = useStore((s) => s.create);
@@ -109,14 +124,14 @@ export function Home({ status }: { status: SourceStatus | null }) {
     <div className="mx-auto max-w-3xl px-4 pb-24 pt-10 sm:px-6 sm:pt-16">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-[12px] text-muted">
-          <Sparkles className="size-3.5 text-accent" /> Free AI research assistant
+          <Sparkles className="size-3.5 text-accent" /> Free research assistant for every field
         </div>
         <h1 className="font-serif text-[40px] leading-[1.08] tracking-tight sm:text-[54px]">
           Find the papers your idea <em className="text-accent">stands on.</em>
         </h1>
         <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-muted">
-          Describe your research or upload a draft. Get related papers ranked and explained, the gaps they leave open, and
-          references built from publisher-registered data.
+          Describe your research or upload a draft. Research Desk finds the closest papers from databases worldwide, explains
+          them, shows the gaps they leave open and builds your references.
         </p>
       </motion.div>
 
@@ -267,7 +282,8 @@ export function Home({ status }: { status: SourceStatus | null }) {
         </Card>
 
         {mode === "idea" && (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="text-[12px] text-faint">Try an example:</span>
             {EXAMPLES.map((ex) => (
               <button
                 key={ex}
@@ -282,34 +298,47 @@ export function Home({ status }: { status: SourceStatus | null }) {
       </motion.div>
 
       <section className="mt-16">
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-faint">What you get</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {[
-            { icon: <FileSearch />, t: "Related papers, ranked", d: "Searched across 10+ global scholarly indexes in every field, scored against a stated rubric, with the reason for each match." },
-            { icon: <BookMarked />, t: "Papers explained", d: "Question, methods, findings and limitations, each linked to the passage it came from." },
-            { icon: <Lightbulb />, t: "Research gaps", d: "Limitations the authors state, quoted and checked, kept apart from AI-suggested questions." },
-            { icon: <Quote />, t: "References and draft checks", d: "Citations in APA, IEEE, MLA and more from DOI records, plus a wording-overlap check for drafts." },
-          ].map((f) => (
-            <div key={f.t} className="rounded-xl border border-border bg-surface/60 p-4">
-              <div className="mb-2 text-accent [&>svg]:size-5">{f.icon}</div>
-              <div className="font-medium">{f.t}</div>
-              <p className="mt-1 text-[13.5px] leading-relaxed text-muted">{f.d}</p>
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-faint">How it works</h2>
+        <ol className="mt-4 grid gap-3 sm:grid-cols-3">
+          {STEPS.map((f, i) => (
+            <li key={f.t} className="relative rounded-xl border border-border bg-surface p-4">
+              <div className="flex items-center gap-2.5">
+                <span className="grid size-7 place-items-center rounded-full bg-accent-soft font-serif text-[14px] text-accent-text">{i + 1}</span>
+                <span className="text-accent [&>svg]:size-4">{f.icon}</span>
+              </div>
+              <div className="mt-3 font-medium">{f.t}</div>
+              <p className="mt-1 text-[13px] leading-relaxed text-muted">{f.d}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-faint">What you can do</h2>
+        <div className="mt-4 grid gap-x-6 gap-y-5 sm:grid-cols-2">
+          {FEATURES.map((f) => (
+            <div key={f.t} className="flex gap-3">
+              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-2 text-accent [&>svg]:size-[18px]">{f.icon}</div>
+              <div>
+                <div className="text-[14.5px] font-medium">{f.t}</div>
+                <p className="mt-0.5 text-[13px] leading-relaxed text-muted">{f.d}</p>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
       <section className="mt-12">
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-faint">
-          Sources searched {status && `· ${status.sources.filter((x) => x.on).length} active`}
-        </h2>
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-faint">Searched for you</h2>
+        <p className="mt-1.5 text-[13px] text-muted">Hover a source to see what it covers.</p>
         <div className="mt-3">
           <SourceList status={status} />
         </div>
         {status && !status.ai && (
-          <p className="mt-3 flex items-center gap-1.5 text-[13px] text-warn">
-            <AlertTriangle className="size-3.5 shrink-0" /> AI features are off: add a free GROQ_API_KEY. Search, keyword ranking, citations
-            and the draft check still work.
+          <p className="mt-4 flex items-start gap-1.5 text-[13px] leading-relaxed text-muted">
+            <Info className="mt-0.5 size-3.5 shrink-0" />
+            AI ranking, summaries, gap finding and writing help aren&apos;t switched on for this site yet. Search, references and
+            both draft checks work now.
           </p>
         )}
       </section>

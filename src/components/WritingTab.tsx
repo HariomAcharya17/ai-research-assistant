@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { post } from "@/lib/client/api";
 import { authorLine, inTextCitation } from "@/lib/cite";
 import type { Project } from "@/lib/client/store";
-import { Button, Callout, Card, cn, copyText, Empty, Segmented } from "./ui";
+import { AiOff, Button, Callout, Card, cn, copyText, Segmented } from "./ui";
 
 type Mode = "grammar" | "clarity" | "structure" | "paraphrase";
 
@@ -24,7 +24,7 @@ interface Result {
   note?: string;
 }
 
-export function WritingTab({ project, ai }: { project: Project; ai: boolean }) {
+export function WritingTab({ project, ai, onTab }: { project: Project; ai: boolean; onTab?: (t: "papers" | "refs" | "draft") => void }) {
   const [mode, setMode] = useState<Mode>("clarity");
   const [text, setText] = useState("");
   const [sourceId, setSourceId] = useState<string>("");
@@ -70,9 +70,12 @@ export function WritingTab({ project, ai }: { project: Project; ai: boolean }) {
 
   if (!ai)
     return (
-      <Empty icon={<PenLine className="size-5" />} title="Writing help needs AI">
-        Add a free GROQ_API_KEY to the deployment to enable writing help.
-      </Empty>
+      <AiOff
+        icon={<PenLine className="size-5" />}
+        title="Writing help"
+        what="Fix grammar, make sentences clearer, improve structure, or paraphrase a source while keeping its citation. Every change is shown word by word."
+        onTab={onTab}
+      />
     );
 
   return (

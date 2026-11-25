@@ -119,6 +119,22 @@ export function Empty({ icon, title, children }: { icon: ReactNode; title: strin
   );
 }
 
+export function AiOff({ icon, title, what, onTab }: { icon: ReactNode; title: string; what: string; onTab?: (t: "papers" | "refs" | "draft") => void }) {
+  return (
+    <Empty icon={icon} title={title}>
+      <p>{what}</p>
+      <p className="mt-2">This needs AI, which isn&apos;t switched on for this site yet. Meanwhile you can:</p>
+      {onTab && (
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <Button size="sm" variant="secondary" onClick={() => onTab("papers")}>Browse papers</Button>
+          <Button size="sm" variant="secondary" onClick={() => onTab("refs")}>Build references</Button>
+          <Button size="sm" variant="secondary" onClick={() => onTab("draft")}>Check a draft</Button>
+        </div>
+      )}
+    </Empty>
+  );
+}
+
 export function Callout({
   tone = "neutral",
   icon,

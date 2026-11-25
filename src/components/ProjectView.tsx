@@ -6,10 +6,13 @@ import {
   Check,
   ChevronDown,
   FileSearch,
+  Info,
   Lightbulb,
+  ListOrdered,
   PenLine,
   RotateCw,
   ScanText,
+  Sparkles,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -22,10 +25,18 @@ import { GapsTab } from "./GapsTab";
 import { PaperDrawer } from "./PaperDrawer";
 import { PapersTab } from "./PapersTab";
 import { ReferencesTab } from "./ReferencesTab";
-import { Button, Callout, cn, Spinner } from "./ui";
+import { Badge, Button, Callout, cn, Spinner } from "./ui";
 import { WritingTab } from "./WritingTab";
 
 type Tab = "papers" | "gaps" | "refs" | "draft" | "write";
+
+const TAB_HELP: Record<Tab, string> = {
+  papers: "Best matches first. Open a paper to read its summary, or press Cite to add it to your references.",
+  gaps: "Compare papers to see the limits their authors admit and the questions they leave open.",
+  refs: "Your reference list, formatted from each paper's official DOI record. Copy it or export BibTeX.",
+  draft: "Check your draft for wording that overlaps the papers here, or estimate how much reads as AI-written.",
+  write: "Improve grammar, clarity and structure, or paraphrase a source while keeping its citation.",
+};
 
 function StepIcon({ state }: { state: StepState }) {
   if (state === "active") return <Spinner />;
@@ -64,7 +75,7 @@ function Progress({ project }: { project: Project }) {
 export function ProjectView({ project, status }: { project: Project; status: SourceStatus | null }) {
   const [tab, setTab] = useState<Tab>("papers");
   const [openPaper, setOpenPaper] = useState<string | null>(null);
-  const [ideaOpen, setIdeaOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const running = project.status === "running";
   const paper = project.papers.find((p) => p.id === openPaper) ?? null;
 
@@ -77,56 +88,119 @@ export function ProjectView({ project, status }: { project: Project; status: Sou
   ];
 
   const failedSources = project.sources.filter((s) => !s.ok);
+  const okSources = project.sources.filter((s) => s.ok && s.count > 0).sort((a, b) => b.count - a.count);
+  const aiRanked = project.papers.some((p) => p.relevance?.method === "ai");
+  // Without AI the title is just the start of the idea, so showing both repeats the same words.
+  const titleIsIdea = !project.title || project.idea.startsWith(project.title.replace(/…$/, "").trim());
 
   return (
     <div className="mx-auto max-w-5xl px-4 pb-24 pt-6 sm:px-6 sm:pt-10">
       <header>
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            {project.fromDraft && project.draft && (
-              <div className="mb-1.5 text-[12px] text-muted">
-                From your draft · <span className="font-medium">{project.draft.name}</span>
-              </div>
-            )}
-            <h1 className="font-serif text-[28px] leading-tight tracking-tight sm:text-[34px]">
-              {project.title || (running ? "Reading your idea…" : "Untitled research")}
-            </h1>
+        {project.fromDraft && project.draft && (
+          <div className="mb-1.5 text-[12px] text-muted">
+            From your draft · <span className="font-medium">{project.draft.name}</span>
           </div>
+        )}
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="min-w-0 font-serif text-[26px] leading-tight tracking-tight sm:text-[32px]">
+            {project.title || (running ? "Reading your idea…" : "Untitled research")}
+          </h1>
           <Button
             size="sm"
-            variant="ghost"
+            variant="secondary"
             onClick={() => runResearch(project.id)}
             disabled={running}
             icon={<RotateCw className={cn("size-3.5", running && "animate-spin")} />}
+            title="Run the search again"
           >
             <span className="hidden sm:inline">Search again</span>
           </Button>
         </div>
-        <button onClick={() => setIdeaOpen((v) => !v)} className="group mt-2 flex w-full items-start gap-1.5 text-left">
-          <p className={cn("text-[14.5px] leading-relaxed text-muted", !ideaOpen && "line-clamp-2")}>{project.idea}</p>
-          <ChevronDown className={cn("mt-1 size-4 shrink-0 text-faint transition", ideaOpen && "rotate-180")} />
-        </button>
-        {project.queries.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <span className="text-[12px] text-faint">Searched for</span>
-            {project.queries.map((q) => (
-              <span key={q} className="rounded-md bg-surface-2 px-2 py-0.5 text-[12px] text-muted">
-                {q}
+        {!titleIsIdea && <p className="mt-2 line-clamp-2 text-[14.5px] leading-relaxed text-muted">{project.idea}</p>}
+
+        {(project.papers.length > 0 || project.queries.length > 0) && (
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px] text-muted">
+            {project.papers.length > 0 && (
+              <span>
+                <span className="font-semibold text-text">{project.papers.length}</span> papers
               </span>
-            ))}
+            )}
+            {okSources.length > 0 && (
+              <span>
+                from <span className="font-semibold text-text">{okSources.length}</span> databases
+              </span>
+            )}
+            {project.papers.length > 0 && !running && (
+              <Badge tone={aiRanked ? "ai" : "neutral"}>
+                {aiRanked ? <Sparkles className="size-3" /> : <ListOrdered className="size-3" />}
+                {aiRanked ? "Ranked by AI" : "Ranked by keyword match"}
+              </Badge>
+            )}
+            <button
+              onClick={() => setDetailsOpen((v) => !v)}
+              aria-expanded={detailsOpen}
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-accent hover:bg-accent-soft"
+            >
+              Search details
+              <ChevronDown className={cn("size-3.5 transition", detailsOpen && "rotate-180")} />
+            </button>
           </div>
         )}
-        {project.sources.some((s) => s.ok && s.count > 0) && (
-          <p className="mt-2 text-[12px] leading-relaxed text-faint">
-            {project.total} records from{" "}
-            {project.sources
-              .filter((s) => s.ok && s.count > 0)
-              .sort((a, b) => b.count - a.count)
-              .map((s) => `${SOURCE_NAMES[s.id]} ${s.count}`)
-              .join(" · ")}
-            , merged and de-duplicated by DOI and title.
-          </p>
-        )}
+
+        <AnimatePresence initial={false}>
+          {detailsOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <dl className="mt-3 space-y-3 rounded-xl border border-border bg-surface p-4 text-[13px]">
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-wider text-faint">Your idea</dt>
+                  <dd className="mt-1 leading-relaxed text-muted">{project.idea}</dd>
+                </div>
+                {project.queries.length > 0 && (
+                  <div>
+                    <dt className="text-[11px] font-semibold uppercase tracking-wider text-faint">Searched for</dt>
+                    <dd className="mt-1.5 flex flex-wrap gap-1.5">
+                      {project.queries.map((q) => (
+                        <span key={q} className="rounded-md bg-surface-2 px-2 py-0.5 text-[12.5px] text-muted">
+                          {q}
+                        </span>
+                      ))}
+                    </dd>
+                  </div>
+                )}
+                {okSources.length > 0 && (
+                  <div>
+                    <dt className="text-[11px] font-semibold uppercase tracking-wider text-faint">Results per database</dt>
+                    <dd className="mt-1.5 flex flex-wrap gap-1.5">
+                      {okSources.map((s) => (
+                        <span key={s.id} className="rounded-md border border-border px-2 py-0.5 text-[12.5px] text-muted">
+                          {SOURCE_NAMES[s.id]} <span className="tabular-nums text-text">{s.count}</span>
+                        </span>
+                      ))}
+                    </dd>
+                    <p className="mt-1.5 text-[12px] text-faint">
+                      {project.total} records in total, merged so each paper appears once.
+                    </p>
+                  </div>
+                )}
+                {failedSources.length > 0 && (
+                  <div>
+                    <dt className="text-[11px] font-semibold uppercase tracking-wider text-faint">Didn&apos;t respond this time</dt>
+                    <dd className="mt-1 text-muted">
+                      {failedSources.map((s) => `${SOURCE_NAMES[s.id]} (${s.error ?? "no response"})`).join(", ")}. The other
+                      databases covered the search.
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       {(running || project.status === "error") && <Progress project={project} />}
@@ -151,25 +225,15 @@ export function ProjectView({ project, status }: { project: Project; status: Sou
 
       {project.papers.length > 0 && (
         <>
-          {!running && (project.steps.rank.state === "skipped" || failedSources.length > 0) && (
-            <div className="mt-5 space-y-2">
-              {project.steps.rank.state === "skipped" && (
-                <Callout tone="warn" icon={<AlertTriangle />}>
-                  AI ranking was skipped: {project.steps.rank.detail?.replace(/\.$/, "")}. Results are ordered by keyword overlap.{" "}
-                  {status?.ai && (
-                    <button className="font-medium underline" onClick={() => runResearch(project.id)}>
-                      Try again
-                    </button>
-                  )}
-                </Callout>
-              )}
-              {failedSources.length > 0 && (
-                <Callout icon={<AlertTriangle />}>
-                  {failedSources.map((s) => `${SOURCE_NAMES[s.id]} (${s.error ?? "no response"})`).join(", ")}{" "}
-                  did not respond this time. Results come from the other sources.
-                </Callout>
-              )}
-            </div>
+          {/* When AI is simply off, the "Ranked by keyword match" badge says enough. */}
+          {!running && project.steps.rank.state === "skipped" && status?.ai !== false && (
+            <Callout tone="warn" icon={<Info />} className="mt-4">
+              AI ranking didn&apos;t finish ({project.steps.rank.detail?.replace(/\.$/, "")}), so papers are ordered by keyword
+              match.{" "}
+              <button className="font-medium underline" onClick={() => runResearch(project.id)}>
+                Try again
+              </button>
+            </Callout>
           )}
 
           <div className="sticky top-[57px] z-20 -mx-4 mt-6 border-b border-border bg-bg/90 px-4 backdrop-blur sm:-mx-6 sm:px-6 lg:top-0">
@@ -205,13 +269,14 @@ export function ProjectView({ project, status }: { project: Project; status: Sou
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
-              className="pt-5"
+              className="pt-4"
             >
-              {tab === "papers" && <PapersTab project={project} running={running} onOpen={setOpenPaper} />}
-              {tab === "gaps" && <GapsTab project={project} ai={status?.ai ?? true} onOpen={setOpenPaper} />}
+              <p className="mb-4 text-[13px] leading-relaxed text-muted">{TAB_HELP[tab]}</p>
+              {tab === "papers" && <PapersTab project={project} running={running} onOpen={setOpenPaper} ai={status?.ai ?? true} />}
+              {tab === "gaps" && <GapsTab project={project} ai={status?.ai ?? true} onOpen={setOpenPaper} onTab={setTab} />}
               {tab === "refs" && <ReferencesTab project={project} onBrowse={() => setTab("papers")} />}
               {tab === "draft" && <DraftTab project={project} onOpen={setOpenPaper} />}
-              {tab === "write" && <WritingTab project={project} ai={status?.ai ?? true} />}
+              {tab === "write" && <WritingTab project={project} ai={status?.ai ?? true} onTab={setTab} />}
             </motion.div>
           </AnimatePresence>
         </>

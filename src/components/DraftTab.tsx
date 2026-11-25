@@ -83,8 +83,7 @@ export function DraftTab({ project, onOpen }: { project: Project; onOpen: (id: s
       <Card className="p-5">
         <h3 className="font-serif text-[20px]">Check your draft</h3>
         <p className="mt-1 max-w-2xl text-[13.5px] leading-relaxed text-muted">
-          Two checks: where your wording overlaps the papers in this project, so you can quote or cite them, and an
-          estimate of how much of the text reads as AI-generated. Your draft stays in this browser.
+          Paste your text or upload a PDF or Word file. It stays in this browser.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
           <textarea

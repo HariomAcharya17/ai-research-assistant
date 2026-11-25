@@ -279,7 +279,7 @@ export function PaperDrawer({
 
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="flex items-center gap-2 font-serif text-[21px]">
-                  <Sparkles className="size-4 text-ai" /> Explained
+                  <Sparkles className="size-4 text-ai" /> AI summary
                 </h3>
                 {summary && (
                   <div className="flex items-center gap-2">
@@ -302,8 +302,9 @@ export function PaperDrawer({
               </div>
 
               {!ai && (
-                <Callout tone="warn" icon={<AlertTriangle />} className="mt-3">
-                  AI is not configured on this deployment, so papers cannot be explained yet.
+                <Callout icon={<AlertTriangle />} className="mt-3">
+                  AI summaries aren&apos;t switched on for this site yet. You can still read the abstract, open the full text
+                  or PDF from the links above, and add the paper to your references.
                 </Callout>
               )}
 

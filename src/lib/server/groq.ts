@@ -54,7 +54,11 @@ function extractJSON(text: string): unknown {
 /** Ask a model for JSON that matches `schema`. Tries each model in the tier in turn. */
 export async function aiJSON<T extends z.ZodType>(opts: AIJsonOptions<T>): Promise<z.infer<T>> {
   const key = process.env.GROQ_API_KEY;
-  if (!key) throw new AIError("AI is not configured. Add a free GROQ_API_KEY to enable this feature.", 503);
+  // Users see a plain message; the setup hint goes to the server log for whoever runs the site.
+  if (!key) {
+    console.warn("AI request skipped: set GROQ_API_KEY (free at console.groq.com) to enable AI features.");
+    throw new AIError("AI features aren't switched on for this site yet.", 503);
+  }
 
   const models = TIERS[opts.tier].filter((m): m is string => Boolean(m));
   const schemaJson = jsonSchemaFor(opts.schema);
@@ -113,7 +117,10 @@ export async function aiJSON<T extends z.ZodType>(opts: AIJsonOptions<T>): Promi
         break; // network or timeout: next model
       }
 
-      if (res.status === 401) throw new AIError("The GROQ_API_KEY was rejected. Check the key.", 503);
+      if (res.status === 401) {
+        console.error("Groq rejected GROQ_API_KEY (401). Check the key.");
+        throw new AIError("AI features are unavailable right now because of a setup problem on this site.", 503);
+      }
       if (res.status === 429) {
         sawRateLimit = true;
         lastError = "Rate limited";
