@@ -38,7 +38,7 @@ function StepIcon({ state }: { state: StepState }) {
 function Progress({ project }: { project: Project }) {
   const steps = [
     { key: "plan" as const, label: "Understanding your idea", sub: "Turning it into database searches" },
-    { key: "search" as const, label: "Searching scholarly sources", sub: "OpenAlex, Semantic Scholar and any keyed APIs" },
+    { key: "search" as const, label: "Searching scholarly sources", sub: "OpenAlex, Crossref, Europe PMC, arXiv, DOAJ and more" },
     { key: "rank" as const, label: "Ranking and explaining matches", sub: "Scoring each paper against your idea" },
   ];
   return (
@@ -83,9 +83,9 @@ export function ProjectView({ project, status }: { project: Project; status: Sou
       <header>
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            {project.draft && (
+            {project.fromDraft && project.draft && (
               <div className="mb-1.5 text-[12px] text-muted">
-                From draft · <span className="font-medium">{project.draft.name}</span>
+                From your draft · <span className="font-medium">{project.draft.name}</span>
               </div>
             )}
             <h1 className="font-serif text-[28px] leading-tight tracking-tight sm:text-[34px]">
@@ -116,6 +116,17 @@ export function ProjectView({ project, status }: { project: Project; status: Sou
             ))}
           </div>
         )}
+        {project.sources.some((s) => s.ok && s.count > 0) && (
+          <p className="mt-2 text-[12px] leading-relaxed text-faint">
+            {project.total} records from{" "}
+            {project.sources
+              .filter((s) => s.ok && s.count > 0)
+              .sort((a, b) => b.count - a.count)
+              .map((s) => `${SOURCE_NAMES[s.id]} ${s.count}`)
+              .join(" · ")}
+            , merged and de-duplicated by DOI and title.
+          </p>
+        )}
       </header>
 
       {(running || project.status === "error") && <Progress project={project} />}
@@ -144,7 +155,7 @@ export function ProjectView({ project, status }: { project: Project; status: Sou
             <div className="mt-5 space-y-2">
               {project.steps.rank.state === "skipped" && (
                 <Callout tone="warn" icon={<AlertTriangle />}>
-                  AI ranking was skipped ({project.steps.rank.detail}). Results are ordered by keyword overlap.{" "}
+                  AI ranking was skipped: {project.steps.rank.detail?.replace(/\.$/, "")}. Results are ordered by keyword overlap.{" "}
                   {status?.ai && (
                     <button className="font-medium underline" onClick={() => runResearch(project.id)}>
                       Try again
@@ -154,8 +165,8 @@ export function ProjectView({ project, status }: { project: Project; status: Sou
               )}
               {failedSources.length > 0 && (
                 <Callout icon={<AlertTriangle />}>
-                  {failedSources.map((s) => SOURCE_NAMES[s.id]).join(", ")} did not respond this time (
-                  {failedSources[0].error}). Results come from the other sources.
+                  {failedSources.map((s) => `${SOURCE_NAMES[s.id]} (${s.error ?? "no response"})`).join(", ")}{" "}
+                  did not respond this time. Results come from the other sources.
                 </Callout>
               )}
             </div>

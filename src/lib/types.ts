@@ -1,10 +1,32 @@
 // Shared types used by the API routes and the client.
 
-export type SourceId = "openalex" | "semanticscholar" | "springer" | "ieee";
+export type SourceId =
+  | "openalex"
+  | "semanticscholar"
+  | "crossref"
+  | "europepmc"
+  | "arxiv"
+  | "doaj"
+  | "hal"
+  | "eric"
+  | "inspire"
+  | "jstage"
+  | "core"
+  | "springer"
+  | "ieee";
 
 export const SOURCE_NAMES: Record<SourceId, string> = {
   openalex: "OpenAlex",
   semanticscholar: "Semantic Scholar",
+  crossref: "Crossref",
+  europepmc: "Europe PMC / PubMed",
+  arxiv: "arXiv",
+  doaj: "DOAJ",
+  hal: "HAL",
+  eric: "ERIC",
+  inspire: "INSPIRE-HEP",
+  jstage: "J-STAGE",
+  core: "CORE",
   springer: "Springer Nature API",
   ieee: "IEEE Xplore API",
 };
@@ -30,6 +52,11 @@ export interface Paper {
   url?: string;
   /** Open-access PDF, when one is known. */
   pdfUrl?: string;
+  /** PubMed Central id: open full text as structured XML from Europe PMC. */
+  pmcid?: string;
+  arxivId?: string;
+  /** Preprints and other work not (yet) peer reviewed. */
+  isPreprint?: boolean;
   venue?: string;
   publisher?: string;
   venueType?: string;
@@ -98,15 +125,22 @@ export interface SearchFilters {
   openAccessOnly?: boolean;
 }
 
+export interface SourceInfo {
+  id: SourceId;
+  name: string;
+  /** What the source covers, shown to the user. */
+  coverage: string;
+  on: boolean;
+  /** Environment variable that turns it on or raises its limits. */
+  key?: string;
+  keyRequired?: boolean;
+}
+
 export interface SourceStatus {
   ai: boolean;
-  openalex: boolean;
-  openalexKey: boolean;
-  semanticscholar: boolean;
-  semanticscholarKey: boolean;
-  springer: boolean;
-  ieee: boolean;
   scopus: boolean;
+  unpaywall: boolean;
+  sources: SourceInfo[];
 }
 
 export const CITATION_STYLES = [

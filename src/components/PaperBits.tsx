@@ -33,8 +33,8 @@ export function RelevanceMeter({ paper, compact }: { paper: Paper; compact?: boo
 export function SourceBadges({ paper }: { paper: Paper }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <Badge tone="accent" title={paper.publisher ? `Publisher: ${paper.publisher}` : undefined}>
-        {paper.label}
+      <Badge tone="accent" className="max-w-[220px]" title={paper.publisher ? `Publisher: ${paper.publisher}` : paper.label}>
+        <span className="truncate">{paper.label}</span>
       </Badge>
       {paper.isOpenAccess && (
         <Badge tone="good">
@@ -56,7 +56,7 @@ export function SourceBadges({ paper }: { paper: Paper }) {
           <BadgeCheck className="size-3" /> DOAJ
         </Badge>
       )}
-      {paper.venueType && /preprint|repository|posted/i.test(paper.venueType + paper.label) && (
+      {paper.isPreprint && (
         <Badge tone="warn" title="Not peer reviewed">
           Preprint
         </Badge>

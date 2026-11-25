@@ -13,6 +13,8 @@ export interface FullText {
   passages: Passage[];
   pages?: number;
   origin: "open-access" | "upload";
+  via?: string;
+  sourceUrl?: string;
 }
 
 export interface Project {
@@ -25,6 +27,8 @@ export interface Project {
   queries: string[];
   filters: SearchFilters;
   draft?: { name: string; text: string };
+  /** The project was started from an uploaded draft. */
+  fromDraft?: boolean;
   status: "running" | "ready" | "error";
   error?: string;
   steps: Record<"plan" | "search" | "rank", { state: StepState; detail?: string }>;
@@ -79,6 +83,7 @@ export const useStore = create<State>()(
           queries: [],
           filters,
           draft,
+          fromDraft: Boolean(draft),
           status: "running",
           steps: { plan: { state: "pending" }, search: { state: "pending" }, rank: { state: "pending" } },
           sources: [],

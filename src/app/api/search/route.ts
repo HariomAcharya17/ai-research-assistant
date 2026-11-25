@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { route } from "@/lib/server/http";
-import { searchAll } from "@/lib/server/sources";
+import { fillFromS2, searchAll } from "@/lib/server/sources";
 import { bm25 } from "@/lib/text";
 import type { Paper } from "@/lib/types";
 
@@ -19,18 +19,25 @@ const Body = z.object({
     .default({}),
 });
 
-const MAX_RESULTS = 40;
+const MAX_RESULTS = 50;
 
 export async function POST(req: Request) {
   return route(req, Body, async ({ idea, queries, keywords, filters }) => {
-    const { papers, sources } = await searchAll(queries, filters);
+    const { papers: all, sources } = await searchAll(queries, filters);
     // Keyword relevance (BM25) over title and abstract. The title counts twice.
     const query = `${idea} ${keywords.join(" ")} ${queries.join(" ")}`;
-    const scores = bm25(
-      query,
-      papers.map((p) => `${p.title} ${p.title} ${p.abstract ?? ""}`),
-    );
+    const score = (list: Paper[]) => bm25(query, list.map((p) => `${p.title} ${p.title} ${p.abstract ?? ""}`));
+    // Fill missing abstracts for the strongest candidates, then score again.
+    const first = score(all);
+    const candidates = all
+      .map((p, i) => ({ p, s: first[i] }))
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 90)
+      .map((x) => x.p);
+    await fillFromS2(candidates);
+    const scores = score(candidates);
     const max = Math.max(...scores, 1e-9);
+    const papers = candidates;
     const ranked: Paper[] = papers
       .map((p, i) => {
         const lexical = scores[i] / max;
@@ -48,7 +55,9 @@ export async function POST(req: Request) {
         };
       })
       .sort((a, b) => (b.lexical ?? 0) - (a.lexical ?? 0))
+      // Drop papers that share almost no terms with the idea (other fields' noise).
+      .filter((p, i) => i < 15 || (p.lexical ?? 0) >= 0.18)
       .slice(0, MAX_RESULTS);
-    return { papers: ranked, sources, total: papers.length };
+    return { papers: ranked, sources, total: all.length };
   });
 }

@@ -12,11 +12,25 @@ function titleCase(s: string) {
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// Any numbered heading such as "III. FORMULATION" or "4.2 Training Setup".
+const NUMBERED = /^(?:\d{1,2}(?:\.\d{1,2}){0,2}\.?|[IVX]{1,5}\.)\s+([A-Z][A-Za-z'’\-–:,&/ ]{2,70})$/;
+
 export function detectHeading(line: string): string | null {
   const t = line.trim();
-  if (t.length > 70) return null;
+  if (t.length > 75) return null;
   const m = HEADING.exec(t);
-  return m ? titleCase(m[1].toLowerCase()) : null;
+  if (m) return titleCase(m[1].toLowerCase());
+  const n = NUMBERED.exec(t);
+  if (n) {
+    const name = n[1].trim().replace(/[:,]$/, "");
+    const wordCount = name.split(/\s+/).length;
+    // Headings are short and either Title Case or ALL CAPS, not a sentence.
+    const caps = name.split(/\s+/).filter((w) => /^[A-Z]/.test(w)).length;
+    if (wordCount <= 9 && caps / wordCount >= 0.5 && !/[.;]$/.test(name)) {
+      return name === name.toUpperCase() ? titleCase(name.toLowerCase()) : name;
+    }
+  }
+  return null;
 }
 
 /** Turn per-page text into passages of roughly `target` characters. */

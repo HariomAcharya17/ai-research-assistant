@@ -87,12 +87,20 @@ export async function runResearch(id: string) {
   }
 }
 
+/** Open access known, or a DOI/arXiv id that may lead to an open copy. */
+export const canFetchFullText = (p: Paper) => Boolean(p.pdfUrl || p.pmcid || p.arxivId || (p.isOpenAccess && p.doi));
+
 export async function loadFullText(projectId: string, paper: Paper): Promise<FullText | null> {
   const existing = getProject(projectId)?.fulltext[paper.id];
   if (existing) return existing;
-  if (!paper.pdfUrl) return null;
-  const res = await post<{ passages: Passage[]; pages: number }>("/api/fulltext", { url: paper.pdfUrl });
-  const ft: FullText = { passages: res.passages, pages: res.pages, origin: "open-access" };
+  if (!canFetchFullText(paper)) return null;
+  const res = await post<{ passages: Passage[]; pages?: number; via: string; sourceUrl: string }>("/api/fulltext", {
+    pdfUrl: paper.pdfUrl,
+    pmcid: paper.pmcid,
+    doi: paper.doi,
+    arxivId: paper.arxivId,
+  });
+  const ft: FullText = { passages: res.passages, pages: res.pages, origin: "open-access", via: res.via, sourceUrl: res.sourceUrl };
   update(projectId, (p) => ({ fulltext: { ...p.fulltext, [paper.id]: ft } }));
   return ft;
 }

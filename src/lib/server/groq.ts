@@ -63,8 +63,14 @@ export async function aiJSON<T extends z.ZodType>(opts: AIJsonOptions<T>): Promi
 
   for (const model of models) {
     const reasoning = /gpt-oss|qwen3/.test(model);
-    // Try structured output first, then plain JSON mode for models without json_schema.
-    for (const mode of ["schema", "object"] as const) {
+    // Try structured output first, then JSON mode, then JSON mode without the
+    // optional reasoning parameters, in case the API rejects one of them.
+    const attempts = [
+      { mode: "schema", extras: true },
+      { mode: "object", extras: true },
+      { mode: "object", extras: false },
+    ] as const;
+    for (const { mode, extras } of attempts) {
       const body: Record<string, unknown> = {
         model,
         temperature: opts.temperature ?? 0.2,
@@ -85,7 +91,9 @@ export async function aiJSON<T extends z.ZodType>(opts: AIJsonOptions<T>): Promi
             ? { type: "json_schema", json_schema: { name: opts.name, schema: schemaJson, strict: false } }
             : { type: "json_object" },
       };
-      if (model.includes("gpt-oss")) {
+      if (!extras) {
+        /* plain request */
+      } else if (model.includes("gpt-oss")) {
         body.reasoning_effort = opts.effort ?? "low";
         body.include_reasoning = false;
       } else if (model.includes("qwen3")) {
@@ -114,8 +122,9 @@ export async function aiJSON<T extends z.ZodType>(opts: AIJsonOptions<T>): Promi
       if (!res.ok) {
         const detail = await res.text().catch(() => "");
         lastError = `${res.status} ${detail.slice(0, 300)}`;
-        // json_schema unsupported or failed validation on Groq's side: retry in JSON mode.
-        if (mode === "schema" && res.status === 400) continue;
+        // json_schema unsupported, schema validation failed on Groq's side, or a rejected
+        // parameter: try the next, simpler request shape.
+        if (res.status === 400) continue;
         break;
       }
 
@@ -128,7 +137,6 @@ export async function aiJSON<T extends z.ZodType>(opts: AIJsonOptions<T>): Promi
       } catch (e) {
         lastError = e instanceof Error ? e.message : String(e);
       }
-      if (mode === "schema") continue;
     }
   }
 

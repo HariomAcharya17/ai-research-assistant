@@ -4,7 +4,7 @@ import { AlertTriangle, FileUp, Info, Library, ScanText, Trash2 } from "lucide-r
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ACCEPT, readDocument } from "@/lib/client/files";
-import { loadFullText } from "@/lib/client/research";
+import { canFetchFullText, loadFullText } from "@/lib/client/research";
 import { useStore, type Project } from "@/lib/client/store";
 import { checkSimilarity, type SentenceResult, type SimilarityReport, type SourceDoc } from "@/lib/similarity";
 import { Badge, Button, Callout, Card, cn } from "./ui";
@@ -31,7 +31,7 @@ export function DraftTab({ project, onOpen }: { project: Project; onOpen: (id: s
   const draft = project.draft;
 
   const oaMissing = useMemo(
-    () => project.papers.filter((p) => p.pdfUrl && !project.fulltext[p.id]).slice(0, 10),
+    () => project.papers.filter((p) => canFetchFullText(p) && !project.fulltext[p.id]).slice(0, 10),
     [project.papers, project.fulltext],
   );
   const fullCount = Object.keys(project.fulltext).length;

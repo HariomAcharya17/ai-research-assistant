@@ -22,8 +22,16 @@ export async function POST(req: Request) {
       // Title, abstract and introduction carry the idea; later sections add little.
       const head = text.slice(0, 9000);
       if (!aiConfigured()) {
-        const firstLine = text.split("\n").find((l) => l.trim().length > 15)?.trim() ?? "Uploaded draft";
-        return { title: firstLine.slice(0, 120), idea: head.slice(0, 1500), keywords: keywords(head, 10), ai: false };
+        // Without AI: title from the opening lines, idea from the abstract when one is marked.
+        const lines = text.split("\n").map((l) => l.trim()).filter((l) => l.length > 3);
+        let title = lines.find((l) => l.length > 15) ?? "Uploaded draft";
+        const next = lines[lines.indexOf(title) + 1];
+        if (next && title.length < 80 && !/[.:;]$/.test(title) && /^[A-Z]/.test(next) && next.length < 80 && !/@|university|department/i.test(next))
+          title = `${title} ${next}`;
+        if (title.length > 120) title = title.slice(0, 120).replace(/\s+\S*$/, "") + "…";
+        const abs = /\babstract\b[\s.:—-]*/i.exec(head);
+        const idea = (abs ? head.slice(abs.index + abs[0].length) : head).slice(0, 1500);
+        return { title, idea: `${title}. ${idea}`, keywords: keywords(idea, 10), ai: false };
       }
       const out = await aiJSON({
         tier: "fast",

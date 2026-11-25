@@ -162,7 +162,7 @@ export function PapersTab({ project, running, onOpen }: { project: Project; runn
                 label === l ? "border-accent bg-accent-soft text-accent-text" : "border-border bg-surface text-muted hover:text-text",
               )}
             >
-              {l === "all" ? "All sources" : l} <span className="tabular-nums opacity-70">{n}</span>
+              {l === "all" ? "All sources" : l.length > 32 ? l.slice(0, 30) + "…" : l} <span className="tabular-nums opacity-70">{n}</span>
             </button>
           ))}
         </div>

@@ -58,6 +58,11 @@ describe("passages", () => {
   it("detects numbered headings", () => {
     expect(detectHeading("2. Related Work")).toBe("Related Work");
     expect(detectHeading("IV. EXPERIMENTS")).toBe("Experiments");
+    expect(detectHeading("III. FORMULATION")).toBe("Formulation");
+    expect(detectHeading("4.2 Training Setup")).toBe("Training Setup");
+    expect(detectHeading("41 0 1 2 3")).toBeNull();
+    expect(detectHeading("1 = Mx1 + Nz(n)")).toBeNull();
+    expect(detectHeading("2 We then train the model on all of the data in the set.")).toBeNull();
     expect(detectHeading("This introduction is long text that is not a heading at all, really")).toBeNull();
   });
 

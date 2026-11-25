@@ -29,31 +29,36 @@ const EXAMPLES = [
   "Detecting phishing websites in real time with lightweight machine learning on URL and page features",
 ];
 
-function SourceChips({ status }: { status: SourceStatus | null }) {
-  const items: { name: string; on: boolean | null; note: string }[] = [
-    { name: "OpenAlex", on: status ? status.openalex : null, note: "250M+ works incl. Springer, IEEE, Elsevier, arXiv" },
-    { name: "Semantic Scholar", on: status ? status.semanticscholar : null, note: "Extra coverage and abstracts" },
-    { name: "Crossref / DataCite", on: status ? true : null, note: "Verified citation details by DOI" },
-    { name: "Springer Nature API", on: status ? status.springer : null, note: "Direct search (free key)" },
-    { name: "IEEE Xplore API", on: status ? status.ieee : null, note: "Direct search (free key)" },
-    { name: "Scopus check", on: status ? status.scopus : null, note: "Journal indexing (free Elsevier key)" },
-    { name: "Google Scholar", on: status ? true : null, note: "Link-out per paper (no public API)" },
+function SourceList({ status }: { status: SourceStatus | null }) {
+  if (!status)
+    return (
+      <div className="grid gap-2 sm:grid-cols-2">
+        {Array.from({ length: 6 }, (_, i) => (
+          <div key={i} className="skeleton h-14" />
+        ))}
+      </div>
+    );
+  const extras = [
+    { name: "Crossref / DataCite citations", coverage: "Reference details taken from the DOI registration record", on: true, key: undefined as string | undefined },
+    { name: "Scopus indexing check", coverage: "Checks each journal's ISSN against Scopus", on: status.scopus, key: "ELSEVIER_API_KEY" },
+    { name: "Unpaywall", coverage: "Finds legal open-access copies by DOI", on: status.unpaywall, key: "CONTACT_EMAIL" },
+    { name: "Google Scholar", coverage: "One-click link per paper (Scholar has no public API)", on: true, key: undefined },
   ];
+  const rows = [...status.sources.map((s) => ({ name: s.name, coverage: s.coverage, on: s.on, key: s.keyRequired ? s.key : undefined })), ...extras];
   return (
-    <div className="flex flex-wrap gap-2">
-      {items.map((s) => (
-        <span
+    <div className="grid gap-2 sm:grid-cols-2">
+      {rows.map((s) => (
+        <div
           key={s.name}
-          title={s.note}
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px]",
-            s.on ? "border-border bg-surface text-text" : "border-dashed border-border text-faint",
-          )}
+          className={cn("rounded-lg border px-3 py-2.5", s.on ? "border-border bg-surface" : "border-dashed border-border bg-transparent")}
         >
-          <span className={cn("size-1.5 rounded-full", s.on ? "bg-good" : s.on === false ? "bg-border-strong" : "bg-border")} />
-          {s.name}
-          {s.on === false && <span className="text-faint">· add key</span>}
-        </span>
+          <div className="flex items-center gap-2 text-[13px] font-medium">
+            <span className={cn("size-1.5 shrink-0 rounded-full", s.on ? "bg-good" : "bg-border-strong")} />
+            <span className={cn(!s.on && "text-muted")}>{s.name}</span>
+            {!s.on && s.key && <span className="ml-auto text-[11px] font-normal text-faint">needs free {s.key}</span>}
+          </div>
+          <p className="mt-0.5 pl-3.5 text-[12px] leading-snug text-muted">{s.coverage}</p>
+        </div>
       ))}
     </div>
   );
@@ -280,7 +285,7 @@ export function Home({ status }: { status: SourceStatus | null }) {
         <h2 className="text-[11px] font-semibold uppercase tracking-wider text-faint">What you get</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {[
-            { icon: <FileSearch />, t: "Related papers, ranked", d: "Searched across open scholarly indexes, scored against a stated rubric, with the reason for each match." },
+            { icon: <FileSearch />, t: "Related papers, ranked", d: "Searched across 10+ global scholarly indexes in every field, scored against a stated rubric, with the reason for each match." },
             { icon: <BookMarked />, t: "Papers explained", d: "Question, methods, findings and limitations, each linked to the passage it came from." },
             { icon: <Lightbulb />, t: "Research gaps", d: "Limitations the authors state, quoted and checked, kept apart from AI-suggested questions." },
             { icon: <Quote />, t: "References and draft checks", d: "Citations in APA, IEEE, MLA and more from DOI records, plus a wording-overlap check for drafts." },
@@ -295,9 +300,11 @@ export function Home({ status }: { status: SourceStatus | null }) {
       </section>
 
       <section className="mt-12">
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-faint">Sources</h2>
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-faint">
+          Sources searched {status && `· ${status.sources.filter((x) => x.on).length} active`}
+        </h2>
         <div className="mt-3">
-          <SourceChips status={status} />
+          <SourceList status={status} />
         </div>
         {status && !status.ai && (
           <p className="mt-3 flex items-center gap-1.5 text-[13px] text-warn">

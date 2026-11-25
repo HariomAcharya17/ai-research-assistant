@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { readPaperPdf } from "@/lib/client/files";
-import { explainPaper, saveUploadedFullText, toggleRef } from "@/lib/client/research";
+import { canFetchFullText, explainPaper, saveUploadedFullText, toggleRef } from "@/lib/client/research";
 import type { Project } from "@/lib/client/store";
 import type { Claim, Paper, Passage, Summary } from "@/lib/types";
 import { PaperLinks, RelevanceMeter, SourceBadges } from "./PaperBits";
@@ -174,7 +174,7 @@ export function PaperDrawer({
     if (!paper) return;
     setError(null);
     try {
-      setPhase(useFull && !fulltext ? "Fetching the open-access PDF…" : "Reading and explaining…");
+      setPhase(useFull && !fulltext ? "Finding an open-access full text…" : "Reading and explaining…");
       if (useFull && !fulltext) {
         // Phase text switches once the full text has arrived.
         const t = setTimeout(() => setPhase("Reading and explaining…"), 4000);
@@ -207,6 +207,7 @@ export function PaperDrawer({
   };
 
   const inRefs = paper ? project.refs.includes(paper.id) : false;
+  const canFetch = paper ? canFetchFullText(paper) : false;
 
   return (
     <AnimatePresence>
@@ -284,14 +285,14 @@ export function PaperDrawer({
                   <div className="flex items-center gap-2">
                     <Badge tone={summary.basis === "fulltext" ? "good" : "warn"}>
                       {summary.basis === "fulltext"
-                        ? `From full text${fulltext?.origin === "upload" ? " (your PDF)" : ""}`
+                        ? `From full text${fulltext?.origin === "upload" ? " (your PDF)" : fulltext?.via ? ` · ${fulltext.via}` : ""}`
                         : "From abstract only"}
                     </Badge>
                     <Button
                       size="sm"
                       variant="ghost"
                       disabled={!!phase || !ai}
-                      onClick={() => explain(Boolean(fulltext || paper.pdfUrl))}
+                      onClick={() => explain(Boolean(fulltext) || canFetch)}
                       icon={<RotateCw className="size-3.5" />}
                     >
                       Redo
@@ -321,7 +322,7 @@ export function PaperDrawer({
                   {summary.basis === "abstract" && (
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-muted">
                       Based on the abstract only.
-                      {paper.pdfUrl && ai && (
+                      {canFetch && ai && (
                         <button className="font-medium text-accent" onClick={() => explain(true)}>
                           Read the full text
                         </button>
@@ -346,13 +347,13 @@ export function PaperDrawer({
                       source passage.
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {paper.pdfUrl && (
+                      {canFetch && (
                         <Button variant="primary" onClick={() => explain(true)} icon={<FileText className="size-4" />}>
                           Read full text and explain
                         </Button>
                       )}
                       {paper.abstract && (
-                        <Button variant={paper.pdfUrl ? "secondary" : "primary"} onClick={() => explain(false)} icon={<Sparkles className="size-4" />}>
+                        <Button variant={canFetch ? "secondary" : "primary"} onClick={() => explain(false)} icon={<Sparkles className="size-4" />}>
                           Explain from abstract
                         </Button>
                       )}
@@ -360,11 +361,11 @@ export function PaperDrawer({
                         Upload PDF
                       </Button>
                     </div>
-                    {!paper.pdfUrl && (
-                      <p className="mt-2.5 text-[12.5px] text-faint">
-                        No open-access PDF is known for this paper. If you have access through your library, upload it.
-                      </p>
-                    )}
+                    <p className="mt-2.5 text-[12.5px] text-faint">
+                      {canFetch
+                        ? "The full text is looked up in PubMed Central, the open-access PDF, arXiv and OpenAlex."
+                        : "No open-access copy is known for this paper. If you have access through your library, upload the PDF."}
+                    </p>
                   </div>
                 )
               )}
